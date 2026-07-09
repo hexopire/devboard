@@ -9,8 +9,8 @@ Status legend: ☐ not started · 🔄 in progress · ✅ done
 | Day | Task | Learning Outcome | Status | Commit |
 |---|---|---|---|---|
 | 1 | 1.1 Init backend (Express, dotenv, nodemon) | Minimal Express server anatomy, env loading | ✅ | |
-| 1 | 1.2 Init frontend (Vite + React) | Vite dev server vs CRA, project skeleton | ☐ | |
-| 1 | 1.3 Write raw SQL migrations for all 7 tables | FK / CHECK / UNIQUE / ENUM constraints by hand | ☐ | |
+| 1 | 1.2 Init frontend (Vite + React) | Vite dev server vs CRA, project skeleton | ✅ | |
+| 1 | 1.3 Write raw SQL migrations for all 7 tables | FK / CHECK / UNIQUE / ENUM constraints by hand | ✅ | |
 | 1 | 1.4 DB pool config + `GET /health` returning `SELECT NOW()` | Connection pooling, async route handlers | ☐ | |
 | 2 | 2.1 Raw SQL insert/select queries for User | Parameterized queries, SQL injection avoidance | ☐ | |
 | 2 | 2.2 `POST /auth/register` (bcrypt hash + insert) | Password hashing mechanics, salt rounds | ☐ | |
