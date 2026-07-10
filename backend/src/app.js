@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const healthRoutes = require('./routes/health');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1', healthRoutes);
+app.use('/api/v1', authRoutes);
 
 const PORT = process.env.PORT || 4000;
 
