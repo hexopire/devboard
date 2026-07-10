@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const { createUser, findUserByEmail } = require('../db/userQueries');
+const { signToken } = require('../utils/jwt');
 
 async function register(req, res) {
   const { name, email, password, role } = req.body;
@@ -17,8 +18,9 @@ async function register(req, res) {
     const saltRounds = 10; // You can adjust this value based on your security needs
     const passwordHash = await bcrypt.hash(password, saltRounds);
     const newUser = await createUser({ name, email, passwordHash, role: role || 'member' });
+    const token = signToken(newUser);
 
-    return res.status(201).json({ success: true, data: newUser });
+    return res.status(201).json({ success: true, data: { user: newUser, token } });
   } catch (error) {
     console.error('Error during registration:', error);
     return res.status(500).json({ success: false, error: 'Internal server error' });
