@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const teamRoutes = require('./routes/teams');
 const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
+const commentRoutes = require('./routes/comments');
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/v1', authRoutes);
 app.use('/api/v1', teamRoutes);
 app.use('/api/v1', projectRoutes);
 app.use('/api/v1', taskRoutes);
+app.use('/api/v1', commentRoutes);
 
 const PORT = process.env.PORT || 4000;
 
