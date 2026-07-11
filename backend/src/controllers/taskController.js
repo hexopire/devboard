@@ -8,6 +8,31 @@ const {
 const { findProjectById } = require('../db/projectQueries');
 const { isTeamMember } = require('../db/teamMemberQueries');
 
+// Mirrors the Postgres task_status enum (migrations/005_create_tasks.sql).
+// Checking against this list here means a bad status is caught with a clear
+// app-level 400 before ever reaching the DB, instead of relying only on the
+// 22P02 catch below (which still stays, as a safety net for anything that
+// slips past this check).
+const VALID_STATUSES = ['todo', 'in_progress', 'done'];
+
+// Assignee must be a member of the task's own team — assigning a task to
+// someone with no membership row would produce a task nobody on the team
+// can attribute to a real teammate. Reuses the same isTeamMember check the
+// membership guard already relies on, just against a different user id
+// (the candidate assignee, not req.user).
+async function validateTaskFields({ status, assigneeId }, teamId) {
+  if (status !== undefined && !VALID_STATUSES.includes(status)) {
+    return `status must be one of: ${VALID_STATUSES.join(', ')}`;
+  }
+  if (assigneeId !== undefined && assigneeId !== null) {
+    const assigneeIsMember = await isTeamMember(teamId, assigneeId);
+    if (!assigneeIsMember) {
+      return 'assigneeId must be a member of this team';
+    }
+  }
+  return null;
+}
+
 // Same membership-guard shape as projectController (Task 5.2): a task's
 // team isn't on the task row directly — it's one hop further out, via
 // task -> project -> team_id. Resolving that chain is what
@@ -34,9 +59,14 @@ async function create(req, res) {
   }
 
   try {
-    const { error } = await resolveProjectAndCheckMembership(projectId, req.user.id);
+    const { error, project } = await resolveProjectAndCheckMembership(projectId, req.user.id);
     if (error) {
       return res.status(error.status).json({ success: false, error: error.message });
+    }
+
+    const validationError = await validateTaskFields({ status, assigneeId }, project.team_id);
+    if (validationError) {
+      return res.status(400).json({ success: false, error: validationError });
     }
 
     const task = await createTask({
@@ -110,9 +140,14 @@ async function update(req, res) {
       return res.status(404).json({ success: false, error: 'Task not found' });
     }
 
-    const { error } = await resolveProjectAndCheckMembership(existing.project_id, req.user.id);
+    const { error, project } = await resolveProjectAndCheckMembership(existing.project_id, req.user.id);
     if (error) {
       return res.status(error.status).json({ success: false, error: error.message });
+    }
+
+    const validationError = await validateTaskFields({ status, assigneeId }, project.team_id);
+    if (validationError) {
+      return res.status(400).json({ success: false, error: validationError });
     }
 
     const task = await updateTask(id, { title, description, status, assigneeId, dueDate });
