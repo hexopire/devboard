@@ -1,11 +1,12 @@
 const { createTeam, findTeamById, listTeamsForUser } = require('../db/teamQueries');
+const { isNonEmptyString, parseId } = require('../utils/validators');
 
 // req.user.id comes from authMiddleware (verified JWT), so we trust it as
 // the creator — the client never gets to say who "created" the team.
 async function create(req, res) {
   const { name } = req.body;
 
-  if (!name) {
+  if (!isNonEmptyString(name)) {
     return res.status(400).json({ success: false, error: 'name is required' });
   }
 
@@ -19,7 +20,10 @@ async function create(req, res) {
 }
 
 async function getById(req, res) {
-  const { id } = req.params;
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
+  }
 
   try {
     const team = await findTeamById(id);

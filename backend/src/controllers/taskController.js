@@ -7,6 +7,7 @@ const {
 } = require('../db/taskQueries');
 const { findProjectById } = require('../db/projectQueries');
 const { isTeamMember } = require('../db/teamMemberQueries');
+const { isNonEmptyString, parseId, isValidDateString } = require('../utils/validators');
 
 // Mirrors the Postgres task_status enum (migrations/005_create_tasks.sql).
 // Checking against this list here means a bad status is caught with a clear
@@ -51,11 +52,21 @@ async function resolveProjectAndCheckMembership(projectId, userId) {
 }
 
 async function create(req, res) {
-  const { projectId } = req.params;
+  const projectId = parseId(req.params.projectId);
+  if (projectId === null) {
+    return res.status(400).json({ success: false, error: 'projectId must be a positive integer' });
+  }
+
   const { title, description, status, assigneeId, dueDate } = req.body;
 
-  if (!title) {
+  if (!isNonEmptyString(title)) {
     return res.status(400).json({ success: false, error: 'title is required' });
+  }
+  if (description !== undefined && description !== null && typeof description !== 'string') {
+    return res.status(400).json({ success: false, error: 'description must be a string' });
+  }
+  if (dueDate !== undefined && dueDate !== null && !isValidDateString(dueDate)) {
+    return res.status(400).json({ success: false, error: 'dueDate must be in YYYY-MM-DD format' });
   }
 
   try {
@@ -93,7 +104,10 @@ async function create(req, res) {
 }
 
 async function listByProject(req, res) {
-  const { projectId } = req.params;
+  const projectId = parseId(req.params.projectId);
+  if (projectId === null) {
+    return res.status(400).json({ success: false, error: 'projectId must be a positive integer' });
+  }
 
   try {
     const { error } = await resolveProjectAndCheckMembership(projectId, req.user.id);
@@ -110,7 +124,10 @@ async function listByProject(req, res) {
 }
 
 async function getById(req, res) {
-  const { id } = req.params;
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
+  }
 
   try {
     const task = await findTaskById(id);
@@ -131,8 +148,21 @@ async function getById(req, res) {
 }
 
 async function update(req, res) {
-  const { id } = req.params;
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
+  }
+
   const { title, description, status, assigneeId, dueDate } = req.body;
+  if (title !== undefined && !isNonEmptyString(title)) {
+    return res.status(400).json({ success: false, error: 'title must be a non-empty string' });
+  }
+  if (description !== undefined && description !== null && typeof description !== 'string') {
+    return res.status(400).json({ success: false, error: 'description must be a string' });
+  }
+  if (dueDate !== undefined && dueDate !== null && !isValidDateString(dueDate)) {
+    return res.status(400).json({ success: false, error: 'dueDate must be in YYYY-MM-DD format' });
+  }
 
   try {
     const existing = await findTaskById(id);
@@ -162,7 +192,10 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const { id } = req.params;
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
+  }
 
   try {
     const existing = await findTaskById(id);

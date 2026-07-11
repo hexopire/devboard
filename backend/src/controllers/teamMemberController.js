@@ -1,13 +1,19 @@
 const { addTeamMember } = require('../db/teamMemberQueries');
+const { parseId } = require('../utils/validators');
 
 const VALID_ROLES = ['lead', 'member'];
 
 async function addMember(req, res) {
-  const teamId = req.params.id;
-  const { userId, role } = req.body;
+  const teamId = parseId(req.params.id);
+  if (teamId === null) {
+    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
+  }
 
-  if (!userId) {
-    return res.status(400).json({ success: false, error: 'userId is required' });
+  const userId = parseId(req.body.userId);
+  const { role } = req.body;
+
+  if (userId === null) {
+    return res.status(400).json({ success: false, error: 'userId is required and must be a positive integer' });
   }
 
   const roleInTeam = role || 'member';
