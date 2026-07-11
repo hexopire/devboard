@@ -5,6 +5,7 @@ const express = require('express');
 const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
 const teamRoutes = require('./routes/teams');
+const projectRoutes = require('./routes/projects');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.get('/', (req, res) => {
 app.use('/api/v1', healthRoutes);
 app.use('/api/v1', authRoutes);
 app.use('/api/v1', teamRoutes);
+app.use('/api/v1', projectRoutes);
 
 const PORT = process.env.PORT || 4000;
 
