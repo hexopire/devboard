@@ -1,4 +1,4 @@
-const { createTeam, findTeamById, listTeams } = require('../db/teamQueries');
+const { createTeam, findTeamById, listTeamsForUser } = require('../db/teamQueries');
 
 // req.user.id comes from authMiddleware (verified JWT), so we trust it as
 // the creator — the client never gets to say who "created" the team.
@@ -33,9 +33,11 @@ async function getById(req, res) {
   }
 }
 
+// Scoped to req.user.id — "list teams" means "teams I belong to", not
+// every team in the system.
 async function list(req, res) {
   try {
-    const teams = await listTeams();
+    const teams = await listTeamsForUser(req.user.id);
     return res.status(200).json({ success: true, data: { teams } });
   } catch (error) {
     console.error('Error listing teams:', error);
