@@ -1,14 +1,10 @@
 const { createTeam, findTeamById, listTeamsForUser } = require('../db/teamQueries');
-const { isNonEmptyString, parseId } = require('../utils/validators');
 
 // req.user.id comes from authMiddleware (verified JWT), so we trust it as
 // the creator — the client never gets to say who "created" the team.
+// name/id shape checks now live as express-validator chains in routes/teams.js.
 async function create(req, res) {
   const { name } = req.body;
-
-  if (!isNonEmptyString(name)) {
-    return res.status(400).json({ success: false, error: 'name is required' });
-  }
 
   try {
     const team = await createTeam({ name, createdBy: req.user.id });
@@ -20,10 +16,7 @@ async function create(req, res) {
 }
 
 async function getById(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
+  const { id } = req.params;
 
   try {
     const team = await findTeamById(id);

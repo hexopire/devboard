@@ -7,29 +7,26 @@ const {
 } = require('../db/taskQueries');
 const { findProjectById } = require('../db/projectQueries');
 const { isTeamMember } = require('../db/teamMemberQueries');
-const { isNonEmptyString, parseId, isValidDateString } = require('../utils/validators');
 
-// Mirrors the Postgres task_status enum (migrations/005_create_tasks.sql).
-// Checking against this list here means a bad status is caught with a clear
-// app-level 400 before ever reaching the DB, instead of relying only on the
-// 22P02 catch below (which still stays, as a safety net for anything that
-// slips past this check).
-const VALID_STATUSES = ['todo', 'in_progress', 'done'];
-
-// Assignee must be a member of the task's own team — assigning a task to
-// someone with no membership row would produce a task nobody on the team
-// can attribute to a real teammate. Reuses the same isTeamMember check the
-// membership guard already relies on, just against a different user id
-// (the candidate assignee, not req.user).
-async function validateTaskFields({ status, assigneeId }, teamId) {
-  if (status !== undefined && !VALID_STATUSES.includes(status)) {
-    return `status must be one of: ${VALID_STATUSES.join(', ')}`;
+// title/description/status/dueDate/assigneeId SHAPE checks (required,
+// string type, one of the enum literals, YYYY-MM-DD format, positive
+// integer) now live as express-validator chains in routes/tasks.js.
+//
+// This one check stays here instead: "is assigneeId an actual member of
+// this task's team" needs a DB query and the project's team_id, which
+// isn't resolved until resolveProjectAndCheckMembership runs below —
+// express-validator COULD do this via an async .custom() validator, but
+// that would mean the route file re-deriving project -> team_id itself,
+// duplicating logic this controller already has to do anyway for the
+// membership guard. Keeping DB-dependent rules next to the query that
+// already has the data beats splitting one feature across two files.
+async function validateAssignee(assigneeId, teamId) {
+  if (assigneeId === undefined || assigneeId === null) {
+    return null;
   }
-  if (assigneeId !== undefined && assigneeId !== null) {
-    const assigneeIsMember = await isTeamMember(teamId, assigneeId);
-    if (!assigneeIsMember) {
-      return 'assigneeId must be a member of this team';
-    }
+  const assigneeIsMember = await isTeamMember(teamId, assigneeId);
+  if (!assigneeIsMember) {
+    return 'assigneeId must be a member of this team';
   }
   return null;
 }
@@ -52,22 +49,8 @@ async function resolveProjectAndCheckMembership(projectId, userId) {
 }
 
 async function create(req, res) {
-  const projectId = parseId(req.params.projectId);
-  if (projectId === null) {
-    return res.status(400).json({ success: false, error: 'projectId must be a positive integer' });
-  }
-
+  const { projectId } = req.params;
   const { title, description, status, assigneeId, dueDate } = req.body;
-
-  if (!isNonEmptyString(title)) {
-    return res.status(400).json({ success: false, error: 'title is required' });
-  }
-  if (description !== undefined && description !== null && typeof description !== 'string') {
-    return res.status(400).json({ success: false, error: 'description must be a string' });
-  }
-  if (dueDate !== undefined && dueDate !== null && !isValidDateString(dueDate)) {
-    return res.status(400).json({ success: false, error: 'dueDate must be in YYYY-MM-DD format' });
-  }
 
   try {
     const { error, project } = await resolveProjectAndCheckMembership(projectId, req.user.id);
@@ -75,9 +58,9 @@ async function create(req, res) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
 
-    const validationError = await validateTaskFields({ status, assigneeId }, project.team_id);
-    if (validationError) {
-      return res.status(400).json({ success: false, error: validationError });
+    const assigneeError = await validateAssignee(assigneeId, project.team_id);
+    if (assigneeError) {
+      return res.status(400).json({ success: false, error: assigneeError });
     }
 
     const task = await createTask({
@@ -104,10 +87,7 @@ async function create(req, res) {
 }
 
 async function listByProject(req, res) {
-  const projectId = parseId(req.params.projectId);
-  if (projectId === null) {
-    return res.status(400).json({ success: false, error: 'projectId must be a positive integer' });
-  }
+  const { projectId } = req.params;
 
   try {
     const { error } = await resolveProjectAndCheckMembership(projectId, req.user.id);
@@ -124,10 +104,7 @@ async function listByProject(req, res) {
 }
 
 async function getById(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
+  const { id } = req.params;
 
   try {
     const task = await findTaskById(id);
@@ -148,21 +125,8 @@ async function getById(req, res) {
 }
 
 async function update(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
-
+  const { id } = req.params;
   const { title, description, status, assigneeId, dueDate } = req.body;
-  if (title !== undefined && !isNonEmptyString(title)) {
-    return res.status(400).json({ success: false, error: 'title must be a non-empty string' });
-  }
-  if (description !== undefined && description !== null && typeof description !== 'string') {
-    return res.status(400).json({ success: false, error: 'description must be a string' });
-  }
-  if (dueDate !== undefined && dueDate !== null && !isValidDateString(dueDate)) {
-    return res.status(400).json({ success: false, error: 'dueDate must be in YYYY-MM-DD format' });
-  }
 
   try {
     const existing = await findTaskById(id);
@@ -175,9 +139,9 @@ async function update(req, res) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
 
-    const validationError = await validateTaskFields({ status, assigneeId }, project.team_id);
-    if (validationError) {
-      return res.status(400).json({ success: false, error: validationError });
+    const assigneeError = await validateAssignee(assigneeId, project.team_id);
+    if (assigneeError) {
+      return res.status(400).json({ success: false, error: assigneeError });
     }
 
     const task = await updateTask(id, { title, description, status, assigneeId, dueDate });
@@ -192,10 +156,7 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
+  const { id } = req.params;
 
   try {
     const existing = await findTaskById(id);

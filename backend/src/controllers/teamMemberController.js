@@ -1,25 +1,12 @@
 const { addTeamMember } = require('../db/teamMemberQueries');
-const { parseId } = require('../utils/validators');
 
-const VALID_ROLES = ['lead', 'member'];
-
+// id/userId/role shape checks now live as express-validator chains in
+// routes/teams.js — this controller trusts req.params.id and req.body are
+// already well-formed by the time it runs.
 async function addMember(req, res) {
-  const teamId = parseId(req.params.id);
-  if (teamId === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
-
-  const userId = parseId(req.body.userId);
-  const { role } = req.body;
-
-  if (userId === null) {
-    return res.status(400).json({ success: false, error: 'userId is required and must be a positive integer' });
-  }
-
+  const { id: teamId } = req.params;
+  const { userId, role } = req.body;
   const roleInTeam = role || 'member';
-  if (!VALID_ROLES.includes(roleInTeam)) {
-    return res.status(400).json({ success: false, error: `role must be one of: ${VALID_ROLES.join(', ')}` });
-  }
 
   try {
     const membership = await addTeamMember({ teamId, userId, role: roleInTeam });

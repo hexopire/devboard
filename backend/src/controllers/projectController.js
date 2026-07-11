@@ -7,26 +7,16 @@ const {
 } = require('../db/projectQueries');
 const { findTeamById } = require('../db/teamQueries');
 const { isTeamMember } = require('../db/teamMemberQueries');
-const { isNonEmptyString, parseId } = require('../utils/validators');
 
 // Role-based auth (e.g. "only a lead can create a project") is still
 // deferred to Day 6's roleGuard. This task adds the coarser check the PRD
 // calls for first: you must belong to the team at all, regardless of role.
+// Shape checks (teamId/id/name/description) now live as express-validator
+// chains in routes/projects.js.
 
 async function create(req, res) {
-  const teamId = parseId(req.params.teamId);
-  if (teamId === null) {
-    return res.status(400).json({ success: false, error: 'teamId must be a positive integer' });
-  }
-
+  const { teamId } = req.params;
   const { name, description } = req.body;
-
-  if (!isNonEmptyString(name)) {
-    return res.status(400).json({ success: false, error: 'name is required' });
-  }
-  if (description !== undefined && description !== null && typeof description !== 'string') {
-    return res.status(400).json({ success: false, error: 'description must be a string' });
-  }
 
   try {
     const team = await findTeamById(teamId);
@@ -48,10 +38,7 @@ async function create(req, res) {
 }
 
 async function listByTeam(req, res) {
-  const teamId = parseId(req.params.teamId);
-  if (teamId === null) {
-    return res.status(400).json({ success: false, error: 'teamId must be a positive integer' });
-  }
+  const { teamId } = req.params;
 
   try {
     const team = await findTeamById(teamId);
@@ -73,10 +60,7 @@ async function listByTeam(req, res) {
 }
 
 async function getById(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
+  const { id } = req.params;
 
   try {
     const project = await findProjectById(id);
@@ -100,18 +84,8 @@ async function getById(req, res) {
 }
 
 async function update(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
-
+  const { id } = req.params;
   const { name, description } = req.body;
-  if (name !== undefined && !isNonEmptyString(name)) {
-    return res.status(400).json({ success: false, error: 'name must be a non-empty string' });
-  }
-  if (description !== undefined && description !== null && typeof description !== 'string') {
-    return res.status(400).json({ success: false, error: 'description must be a string' });
-  }
 
   try {
     const existing = await findProjectById(id);
@@ -133,10 +107,7 @@ async function update(req, res) {
 }
 
 async function remove(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res.status(400).json({ success: false, error: 'id must be a positive integer' });
-  }
+  const { id } = req.params;
 
   try {
     const existing = await findProjectById(id);

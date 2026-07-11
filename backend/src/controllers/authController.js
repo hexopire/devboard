@@ -1,26 +1,16 @@
 const bcrypt = require('bcrypt');
 const { createUser, findUserByEmail, findUserById } = require('../db/userQueries');
 const { signToken } = require('../utils/jwt');
-const { isNonEmptyString, isValidEmail } = require('../utils/validators');
 
-const VALID_ROLES = ['admin', 'member', 'viewer'];
-const MIN_PASSWORD_LENGTH = 8;
-
+// Shape/format checks (required, email format, password length, role enum)
+// now live in routes/auth.js as express-validator chains, run by the
+// `validate` middleware before this function is even called. Only the
+// checks that need a DB round-trip stay here — express-validator COULD do
+// this too via a .custom() async validator, but that would mean a route
+// file quietly making DB queries, which reads oddly compared to a
+// controller doing it.
 async function register(req, res) {
   const { name, email, password, role } = req.body;
-
-  if (!isNonEmptyString(name)) {
-    return res.status(400).json({ success: false, error: 'name is required' });
-  }
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ success: false, error: 'a valid email is required' });
-  }
-  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-    return res.status(400).json({ success: false, error: `password must be at least ${MIN_PASSWORD_LENGTH} characters` });
-  }
-  if (role !== undefined && !VALID_ROLES.includes(role)) {
-    return res.status(400).json({ success: false, error: `role must be one of: ${VALID_ROLES.join(', ')}` });
-  }
 
   const existingUser = await findUserByEmail(email);
   if (existingUser) {
@@ -42,10 +32,6 @@ async function register(req, res) {
 
 async function login(req, res) {
   const { email, password } = req.body;
-
-  if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
-    return res.status(400).json({ success: false, error: 'email and password are required' });
-  }
 
   try {
     const user = await findUserByEmail(email);
