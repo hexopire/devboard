@@ -5,8 +5,8 @@ const {
   updateTask,
   deleteTask,
 } = require('../db/taskQueries');
-const { findProjectById } = require('../db/projectQueries');
 const { isTeamMember } = require('../db/teamMemberQueries');
+const { resolveProjectAndCheckMembership } = require('../utils/membership');
 
 // title/description/status/dueDate/assigneeId SHAPE checks (required,
 // string type, one of the enum literals, YYYY-MM-DD format, positive
@@ -29,23 +29,6 @@ async function validateAssignee(assigneeId, teamId) {
     return 'assigneeId must be a member of this team';
   }
   return null;
-}
-
-// Same membership-guard shape as projectController (Task 5.2): a task's
-// team isn't on the task row directly — it's one hop further out, via
-// task -> project -> team_id. Resolving that chain is what
-// resolveProjectAndCheckMembership does, so every handler below shares it
-// instead of repeating the two-query lookup five times.
-async function resolveProjectAndCheckMembership(projectId, userId) {
-  const project = await findProjectById(projectId);
-  if (!project) {
-    return { error: { status: 404, message: 'Project not found' } };
-  }
-  const isMember = await isTeamMember(project.team_id, userId);
-  if (!isMember) {
-    return { error: { status: 403, message: 'You are not a member of this team' } };
-  }
-  return { project };
 }
 
 async function create(req, res) {

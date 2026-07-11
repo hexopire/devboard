@@ -8,6 +8,7 @@ const teamRoutes = require('./routes/teams');
 const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
 const commentRoutes = require('./routes/comments');
+const attachmentRoutes = require('./routes/attachments');
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/v1', teamRoutes);
 app.use('/api/v1', projectRoutes);
 app.use('/api/v1', taskRoutes);
 app.use('/api/v1', commentRoutes);
+app.use('/api/v1', attachmentRoutes);
 
 const PORT = process.env.PORT || 4000;
 

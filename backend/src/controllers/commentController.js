@@ -1,23 +1,5 @@
 const { createComment, listCommentsByTask } = require('../db/commentQueries');
-const { findTaskById } = require('../db/taskQueries');
-const { findProjectById } = require('../db/projectQueries');
-const { isTeamMember } = require('../db/teamMemberQueries');
-
-// Third FK hop: a comment's team is comment -> task -> project -> team_id.
-// Same shape as taskController's resolveProjectAndCheckMembership, just one
-// level further out — task first, then project, then the membership check.
-async function resolveTaskAndCheckMembership(taskId, userId) {
-  const task = await findTaskById(taskId);
-  if (!task) {
-    return { error: { status: 404, message: 'Task not found' } };
-  }
-  const project = await findProjectById(task.project_id);
-  const isMember = await isTeamMember(project.team_id, userId);
-  if (!isMember) {
-    return { error: { status: 403, message: 'You are not a member of this team' } };
-  }
-  return { task };
-}
+const { resolveTaskAndCheckMembership } = require('../utils/membership');
 
 // req.user.id is the comment's author — trusted from the verified JWT, same
 // as createdBy on tasks/teams. The client never gets to say who wrote it.
