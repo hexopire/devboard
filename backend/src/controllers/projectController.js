@@ -6,10 +6,11 @@ const {
   deleteProject,
 } = require('../db/projectQueries');
 const { findTeamById } = require('../db/teamQueries');
+const { isTeamMember } = require('../db/teamMemberQueries');
 
-// Membership/role checks are deferred to Task 5.2 (basic membership guard)
-// and Day 6 (role-based roleGuard) — this task is scoped to plain nested
-// CRUD mechanics: any authenticated user can hit these routes for now.
+// Role-based auth (e.g. "only a lead can create a project") is still
+// deferred to Day 6's roleGuard. This task adds the coarser check the PRD
+// calls for first: you must belong to the team at all, regardless of role.
 
 async function create(req, res) {
   const { teamId } = req.params;
@@ -23,6 +24,11 @@ async function create(req, res) {
     const team = await findTeamById(teamId);
     if (!team) {
       return res.status(404).json({ success: false, error: 'Team not found' });
+    }
+
+    const isMember = await isTeamMember(teamId, req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ success: false, error: 'You are not a member of this team' });
     }
 
     const project = await createProject({ teamId, name, description });
@@ -42,6 +48,11 @@ async function listByTeam(req, res) {
       return res.status(404).json({ success: false, error: 'Team not found' });
     }
 
+    const isMember = await isTeamMember(teamId, req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ success: false, error: 'You are not a member of this team' });
+    }
+
     const projects = await listProjectsByTeam(teamId);
     return res.status(200).json({ success: true, data: { projects } });
   } catch (error) {
@@ -58,6 +69,15 @@ async function getById(req, res) {
     if (!project) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
+
+    // Membership is checked against the project's own team_id, not a
+    // teamId from the URL — this route is flat (/projects/:id), so the
+    // team has to be looked up from the resource itself.
+    const isMember = await isTeamMember(project.team_id, req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ success: false, error: 'You are not a member of this team' });
+    }
+
     return res.status(200).json({ success: true, data: { project } });
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -75,6 +95,11 @@ async function update(req, res) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
+    const isMember = await isTeamMember(existing.team_id, req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ success: false, error: 'You are not a member of this team' });
+    }
+
     const project = await updateProject(id, { name, description });
     return res.status(200).json({ success: true, data: { project } });
   } catch (error) {
@@ -87,10 +112,17 @@ async function remove(req, res) {
   const { id } = req.params;
 
   try {
-    const deleted = await deleteProject(id);
-    if (!deleted) {
+    const existing = await findProjectById(id);
+    if (!existing) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
+
+    const isMember = await isTeamMember(existing.team_id, req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ success: false, error: 'You are not a member of this team' });
+    }
+
+    await deleteProject(id);
     return res.status(200).json({ success: true, data: { message: 'Project deleted' } });
   } catch (error) {
     console.error('Error deleting project:', error);
