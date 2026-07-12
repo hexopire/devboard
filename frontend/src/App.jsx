@@ -6,6 +6,7 @@ import TeamPage from './pages/TeamPage';
 import ProjectPage from './pages/ProjectPage';
 import TaskDetailPage from './pages/TaskDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ProtectedRoute from './routes/ProtectedRoute.jsx';
 
 // <Routes>/<Route> is what maps a URL path to a component — react-router
 // intercepts link clicks and browser back/forward, then swaps which
@@ -14,19 +15,47 @@ import NotFoundPage from './pages/NotFoundPage';
 // BrowserRouter itself lives in main.jsx, wrapping <App /> once — everything
 // under it can use routing hooks like useParams/useNavigate.
 //
-// No auth guarding yet — every route below is reachable by anyone. Task
-// 12.3's ProtectedRoute wraps the ones that should require a logged-in
-// user (Dashboard/Team/Project/Task), once Task 12.2's AuthContext exists
-// to check against.
+// Dashboard/Team/Project/Task all require a logged-in user — each is
+// wrapped in <ProtectedRoute>, which redirects to /login if there's no
+// token in AuthContext. Login/Register stay unwrapped since they're the
+// only routes a logged-out user can actually reach.
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/" element={<DashboardPage />} />
-      <Route path="/teams/:teamId" element={<TeamPage />} />
-      <Route path="/projects/:projectId" element={<ProjectPage />} />
-      <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teams/:teamId"
+        element={
+          <ProtectedRoute>
+            <TeamPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/projects/:projectId"
+        element={
+          <ProtectedRoute>
+            <ProjectPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks/:taskId"
+        element={
+          <ProtectedRoute>
+            <TaskDetailPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
