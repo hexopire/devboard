@@ -18,4 +18,10 @@ function createTeam(token, name) {
   });
 }
 
-export { listTeams, createTeam };
+function getTeamById(token, teamId) {
+  return apiFetch(`/teams/${teamId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export { listTeams, createTeam, getTeamById };
