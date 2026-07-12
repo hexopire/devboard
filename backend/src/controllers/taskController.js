@@ -128,6 +128,15 @@ async function remove(req, res) {
     return res.status(error.status).json({ success: false, error: error.message });
   }
 
+  // "Delete task" (Section 6 table): Admin can delete any task; Member can
+  // only delete their own. Checked against created_by specifically — being
+  // the assignee does not grant delete permission, only having created it
+  // does. Admin bypasses this check entirely, matching the table's
+  // unconditional "Delete task: Admin ✅".
+  if (req.user.role !== 'admin' && existing.created_by !== req.user.id) {
+    return res.status(403).json({ success: false, error: 'You can only delete tasks you created' });
+  }
+
   await deleteTask(id);
   return res.status(200).json({ success: true, data: { message: 'Task deleted' } });
 }

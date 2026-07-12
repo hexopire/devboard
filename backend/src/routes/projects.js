@@ -36,7 +36,23 @@ router.post(
 );
 router.get('/teams/:teamId/projects', authMiddleware, teamIdParam, validate, listByTeam);
 router.get('/projects/:id', authMiddleware, idParam, validate, getById);
-router.patch('/projects/:id', authMiddleware, idParam, optionalNameBody, descriptionBody, validate, update);
-router.delete('/projects/:id', authMiddleware, idParam, validate, remove);
+// Task 17.1's QA pass found update/delete had NO role restriction at all —
+// only membership — which let a viewer edit or delete any project on
+// their team. There's no separate "edit/delete project" row in the
+// Section 6 table (and projects have no created_by column, so an
+// ownership check like tasks' delete restriction isn't even possible
+// here), so this mirrors "Create project in team"'s role gate instead:
+// Admin + Member, Viewer blocked.
+router.patch(
+  '/projects/:id',
+  authMiddleware,
+  roleGuard(['admin', 'member']),
+  idParam,
+  optionalNameBody,
+  descriptionBody,
+  validate,
+  update
+);
+router.delete('/projects/:id', authMiddleware, roleGuard(['admin', 'member']), idParam, validate, remove);
 
 module.exports = router;

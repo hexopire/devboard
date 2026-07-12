@@ -25,11 +25,13 @@ const assigneeIdBody = body('assigneeId').optional({ nullable: true }).isInt({ m
 
 // Section 6 table:
 // - "Create/edit task": Admin + Member, Viewer ❌ — roleGuard on create/update.
+//   No "(own)" restriction on edit — any team member can edit any task,
+//   matching the table exactly (only the delete row has that qualifier).
 // - "Delete task": Admin ✅, Member ✅ but "(own)" only, Viewer ❌. roleGuard
-//   can't express "only your own task" (that needs comparing task.created_by
-//   to req.user.id, a per-resource check, not a role check) — same kind of
-//   gap as the "member only if team lead" note on project creation (Task 6.2).
-//   Flagging it rather than silently allowing any member to delete any task.
+//   only narrows by role (blocks viewer); the "only your own task" part needs
+//   comparing task.created_by to req.user.id, a per-resource check roleGuard
+//   can't express — that ownership check lives in taskController.js's
+//   remove(), after the membership guard runs.
 // - "View everything in their team": all three roles — no roleGuard on the
 //   GET routes, just the membership check already inside the controller.
 router.post(
