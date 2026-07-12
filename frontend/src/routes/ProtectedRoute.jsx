@@ -11,8 +11,17 @@ import { useAuth } from '../context/AuthContext.jsx';
 // authenticated fetch call will need to send as the Authorization header
 // (Task 13.1+), so "authenticated" is defined as "has a token," not just
 // "has some user object in memory."
+//
+// isLoading (Task 13.2) covers the gap on page load/refresh: AuthContext
+// hasn't finished asking the backend whether a stored token is still valid
+// yet. Without this check, every refresh would flash-redirect to /login
+// for a split second even when the stored token turns out to be fine.
 function ProtectedRoute({ children }) {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <p>Loading...</p>;
+  }
 
   if (!token) {
     return <Navigate to="/login" replace />;

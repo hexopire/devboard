@@ -17,4 +17,14 @@ function register(name, email, password) {
   });
 }
 
-export { login, register };
+// Used on app load (AuthContext) to turn a stored token back into a real
+// user object — also doubles as validating that the stored token is still
+// good (an expired/tampered token makes this 401, which is the signal to
+// clear localStorage instead of trusting stale data).
+function getMe(token) {
+  return apiFetch('/auth/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export { login, register, getMe };
