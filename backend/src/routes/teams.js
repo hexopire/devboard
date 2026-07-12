@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const { create, getById, list } = require('../controllers/teamController');
-const { addMember } = require('../controllers/teamMemberController');
+const { addMember, listByTeam: listMembers } = require('../controllers/teamMemberController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { roleGuard } = require('../middleware/roleGuard');
 const { validate } = require('../middleware/validate');
@@ -38,6 +38,15 @@ router.post(
   body('role').optional().isIn(TEAM_MEMBER_ROLES).withMessage(`role must be one of: ${TEAM_MEMBER_ROLES.join(', ')}`),
   validate,
   addMember
+);
+// Not in the PRD's Section 7 API contract at all — added for Task 15.2's
+// assignee dropdown, which has no way to know who's on the team otherwise.
+router.get(
+  '/teams/:id/members',
+  authMiddleware,
+  param('id').isInt({ min: 1 }).withMessage('id must be a positive integer').toInt(),
+  validate,
+  listMembers
 );
 
 module.exports = router;

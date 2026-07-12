@@ -24,4 +24,18 @@ function createTask(token, projectId, title, description, dueDate) {
   });
 }
 
-export { listTasksByProject, createTask };
+// One shared PATCH for both the status control and the assignee dropdown —
+// both just send whichever single field changed. assigneeId of '' (the
+// dropdown's "Unassigned" option) needs to become null, same reasoning as
+// dueDate in createTask: the backend distinguishes "field not sent" from
+// "field sent as an actual value," and an empty string is neither undefined
+// nor a valid id.
+function updateTask(token, taskId, fields) {
+  return apiFetch(`/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(fields),
+  });
+}
+
+export { listTasksByProject, createTask, updateTask };

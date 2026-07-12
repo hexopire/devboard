@@ -1,4 +1,4 @@
-const { addTeamMember } = require('../db/teamMemberQueries');
+const { addTeamMember, isTeamMember, listMembersByTeam } = require('../db/teamMemberQueries');
 const { asyncHandler } = require('../utils/asyncHandler');
 
 // id/userId/role shape checks now live as express-validator chains in
@@ -21,4 +21,19 @@ async function addMember(req, res) {
   return res.status(201).json({ success: true, data: { membership } });
 }
 
-module.exports = { addMember: asyncHandler(addMember) };
+// Not in the Section 6 table (same as addMember above) — gated by
+// membership only, matching every other GET on a team-scoped resource
+// (projects, tasks): you must belong to the team to see who else does.
+async function listByTeam(req, res) {
+  const { id: teamId } = req.params;
+
+  const isMember = await isTeamMember(teamId, req.user.id);
+  if (!isMember) {
+    return res.status(403).json({ success: false, error: 'You are not a member of this team' });
+  }
+
+  const members = await listMembersByTeam(teamId);
+  return res.status(200).json({ success: true, data: { members } });
+}
+
+module.exports = { addMember: asyncHandler(addMember), listByTeam: asyncHandler(listByTeam) };

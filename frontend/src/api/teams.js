@@ -24,4 +24,10 @@ function getTeamById(token, teamId) {
   });
 }
 
-export { listTeams, createTeam, getTeamById };
+function listTeamMembers(token, teamId) {
+  return apiFetch(`/teams/${teamId}/members`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export { listTeams, createTeam, getTeamById, listTeamMembers };

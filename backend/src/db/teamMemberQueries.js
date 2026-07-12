@@ -22,4 +22,19 @@ async function isTeamMember(teamId, userId) {
   return result.rowCount > 0;
 }
 
-module.exports = { addTeamMember, isTeamMember };
+// Joins users in to surface name/email alongside role_in_team — the
+// frontend's assignee dropdown (Task 15.2) needs a human-readable label,
+// not just a bare user_id.
+async function listMembersByTeam(teamId) {
+  const result = await pool.query(
+    `SELECT u.id, u.name, u.email, tm.role_in_team, tm.joined_at
+     FROM team_members tm
+     JOIN users u ON u.id = tm.user_id
+     WHERE tm.team_id = $1
+     ORDER BY tm.joined_at ASC`,
+    [teamId]
+  );
+  return result.rows;
+}
+
+module.exports = { addTeamMember, isTeamMember, listMembersByTeam };
