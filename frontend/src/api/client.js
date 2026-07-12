@@ -26,4 +26,4 @@ async function apiFetch(path, options = {}) {
   return body.data;
 }
 
-export { apiFetch };
+export { apiFetch, API_BASE_URL };

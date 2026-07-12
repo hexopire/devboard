@@ -5,6 +5,7 @@ import { getTaskById } from '../api/tasks.js';
 import { getProjectById } from '../api/projects.js';
 import { listTeamMembers } from '../api/teams.js';
 import { listComments, createComment } from '../api/comments.js';
+import { listAttachments, uploadAttachment, downloadAttachment } from '../api/attachments.js';
 
 // Same nested-fetch chain as ProjectPage's team-members lookup (Task
 // 15.2), one hop further: comments only have user_id (Task 9.1's schema),
@@ -28,6 +29,14 @@ function TaskDetailPage() {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [postError, setPostError] = useState(null);
+
+  const [attachments, setAttachments] = useState([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(true);
+  const [attachmentsError, setAttachmentsError] = useState(null);
+
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
 
   useEffect(() => {
     setTaskError(null);
@@ -70,9 +79,55 @@ function TaskDetailPage() {
       .finally(() => setIsLoadingComments(false));
   }, [token, taskId]);
 
+  useEffect(() => {
+    setIsLoadingAttachments(true);
+    setAttachmentsError(null);
+
+    listAttachments(token, taskId)
+      .then(({ attachments: fetchedAttachments }) => setAttachments(fetchedAttachments))
+      .catch((err) => setAttachmentsError(err.message))
+      .finally(() => setIsLoadingAttachments(false));
+  }, [token, taskId]);
+
   function authorName(userId) {
     const member = members.find((m) => m.id === userId);
     return member ? member.name : `User #${userId}`;
+  }
+
+  // file_path (e.g. "uploads/171...-abc.pdf") is the only name info an
+  // attachment row has — Task 10.2's schema never stored the client's
+  // original filename, so this is the generated name, not what the user
+  // actually uploaded. A known limitation, not something to silently
+  // paper over here.
+  function displayName(attachment) {
+    return attachment.file_path.split(/[/\\]/).pop();
+  }
+
+  async function handleUpload(event) {
+    event.preventDefault();
+    if (!selectedFile) {
+      return;
+    }
+    setUploadProgress(0);
+    setUploadError(null);
+
+    try {
+      const { attachment } = await uploadAttachment(token, taskId, selectedFile, setUploadProgress);
+      setAttachments((currentAttachments) => [attachment, ...currentAttachments]);
+      setSelectedFile(null);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploadProgress(null);
+    }
+  }
+
+  async function handleDownload(attachment) {
+    try {
+      await downloadAttachment(token, attachment.id, displayName(attachment));
+    } catch (err) {
+      setAttachmentsError(err.message);
+    }
   }
 
   async function handlePostComment(event) {
@@ -129,6 +184,36 @@ function TaskDetailPage() {
         {postError && <p role="alert">{postError}</p>}
         <button type="submit" disabled={isPosting}>
           {isPosting ? 'Posting...' : 'Post comment'}
+        </button>
+      </form>
+
+      <h2>Attachments</h2>
+      {isLoadingAttachments && <p>Loading attachments...</p>}
+      {attachmentsError && <p role="alert">{attachmentsError}</p>}
+      {!isLoadingAttachments && !attachmentsError && attachments.length === 0 && <p>No attachments yet.</p>}
+      <ul>
+        {attachments.map((attachment) => (
+          <li key={attachment.id}>
+            <button type="button" onClick={() => handleDownload(attachment)}>
+              {displayName(attachment)}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <form onSubmit={handleUpload}>
+        <label htmlFor="attachmentFile">Add a file</label>
+        <input
+          id="attachmentFile"
+          type="file"
+          onChange={(event) => setSelectedFile(event.target.files[0] ?? null)}
+        />
+        {/* uploadProgress is a real byte-count percentage from
+            xhr.upload.onprogress (api/attachments.js) — not a fake spinner. */}
+        {uploadProgress !== null && <p>Uploading... {uploadProgress}%</p>}
+        {uploadError && <p role="alert">{uploadError}</p>}
+        <button type="submit" disabled={!selectedFile || uploadProgress !== null}>
+          Upload
         </button>
       </form>
 
