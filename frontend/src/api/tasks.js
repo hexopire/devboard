@@ -38,4 +38,10 @@ function updateTask(token, taskId, fields) {
   });
 }
 
-export { listTasksByProject, createTask, updateTask };
+function getTaskById(token, taskId) {
+  return apiFetch(`/tasks/${taskId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export { listTasksByProject, createTask, updateTask, getTaskById };
