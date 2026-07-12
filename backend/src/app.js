@@ -10,8 +10,14 @@ const taskRoutes = require('./routes/tasks');
 const commentRoutes = require('./routes/comments');
 const attachmentRoutes = require('./routes/attachments');
 const { errorHandler } = require('./middleware/errorHandler');
+const { cors } = require('./middleware/cors');
 
 const app = express();
+
+// Must run before routes (so preflight OPTIONS requests get answered) and
+// works fine before express.json() too — it only sets response headers,
+// never touches req.body.
+app.use(cors);
 
 // Parses JSON request bodies into req.body. Needed before any route reads req.body.
 app.use(express.json());
