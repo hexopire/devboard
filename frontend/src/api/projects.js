@@ -19,4 +19,10 @@ function createProject(token, teamId, name, description) {
   });
 }
 
-export { listProjectsByTeam, createProject };
+function getProjectById(token, projectId) {
+  return apiFetch(`/projects/${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export { listProjectsByTeam, createProject, getProjectById };

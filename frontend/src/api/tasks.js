@@ -1,0 +1,27 @@
+import { apiFetch } from './client';
+
+// projectId scopes this fetch, same pattern as teamId scoping projects.js —
+// read from the URL via useParams in ProjectPage, threaded through here.
+function listTasksByProject(token, projectId) {
+  return apiFetch(`/projects/${projectId}/tasks`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// status/assigneeId aren't exposed here yet — Task 15.2 adds the status
+// control and assignee dropdown. A brand-new task just gets the backend's
+// default status ('todo') and no assignee, matching what an empty form
+// should produce.
+function createTask(token, projectId, title, description, dueDate) {
+  return apiFetch(`/projects/${projectId}/tasks`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    // dueDate as '' would fail the backend's YYYY-MM-DD check (it's not
+    // `undefined`, it's an empty string) — send null instead when the
+    // field was left blank, since the backend treats null/undefined as
+    // "no due date" but validates any string it actually receives.
+    body: JSON.stringify({ title, description: description || null, dueDate: dueDate || null }),
+  });
+}
+
+export { listTasksByProject, createTask };
