@@ -9,6 +9,7 @@ const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
 const commentRoutes = require('./routes/comments');
 const attachmentRoutes = require('./routes/attachments');
+const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -26,6 +27,17 @@ app.use('/api/v1', projectRoutes);
 app.use('/api/v1', taskRoutes);
 app.use('/api/v1', commentRoutes);
 app.use('/api/v1', attachmentRoutes);
+
+// Catches any request that didn't match a route above — without this,
+// Express's default 404 is an HTML page, breaking the {success, error}
+// envelope contract every other response follows.
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: 'Route not found' });
+});
+
+// Must be registered LAST, after every route AND the 404 handler above —
+// see the comment in errorHandler.js for why arity/position both matter.
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 
